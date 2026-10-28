@@ -269,3 +269,158 @@ void Start()
 ```
 
 What I have done is convert the script reference into a public variable. That is, when in the game scene and inspecting the player, I will now see a script reference that needs to be set manually. While this has not resolved the coupling of these two scripts, it has at the very least shown light on it. That way, future developers (such as myself in a few month's time) will understand from a glance that this script requires objectGrabber to function, rather than attempting to use it without realizing the silent communication happening under the hood.
+
+
+---
+
+# Code Smell #3: Long Function (Valerie)
+
+## What is Long Function?
+
+Long Function is a code smell when a function does too many things at once. Thus makes the code harder to understand and change because everything is in one place. Martin Fowler explains that even though longer functions can work, smaller functions with more descriptive names are easier to understand. One way to fix this is through the menthod of Extract Function, when you take a section of code and move it into its own function.
+
+## My Example
+
+My example is from a Unity game I worked on. The script handles an armor pickup that gives the player additional armor when they collide with it. It works by checking if the player is touching the pickup and checking how much armor the player already has and then calculating how much armor to give them without exceeding their maximum. This is the original `OnCollisionEnter2D()` function from my script:
+
+```C#
+void OnCollisionEnter2D(Collision2D collision)
+{
+    if (collision.gameObject.CompareTag("Player"))
+    {
+        //print("Armor picked up by Player");
+        if (currentArmor < maxArmor)
+        {
+            int newArmor = addedArmor + currentArmor;
+            if (newArmor < maxArmor)
+            {
+                playerStats.SetArmor(newArmor);
+            }
+            else
+            {
+                playerStats.SetArmor(maxArmor);
+            }
+        }
+
+        Destroy(gameObject);
+    }
+}
+```
+
+## Why This Is a Problem
+
+The main issue is that `OnCollisionEnter2D()` is handling several different responsibilities. It detects the collision, checks whether the object is the player, calculates the new armor value, makes sure the player doesn't exceed their maximum armor, and destroys the pickup. Even though this function isn't extremely long. Also the nested if statements make it more complicated than it needs to be. For example, if I wanted to change how armor pickups worked in the future, i would have to go searching around. This can become a huge problem as more features get added.
+
+## My Solution
+
+I would use the Extract Function to separate the armor calculation from the collision detection. I would also get rid of my nested conditionals using Mathf.Min() to make sure the player doesn't exceed max armour.
+
+First, I would extract the armor calculation into its own function:
+
+```C#
+void GiveArmor()
+{
+    if (currentArmor < maxArmor)
+    {
+        int newArmor = Mathf.Min(
+            currentArmor + addedArmor,
+            maxArmor
+        );
+
+        playerStats.SetArmor(newArmor);
+    }
+}
+```
+
+This function handles calculating and updating the player's armor without using the collision detection.
+Next, I would simplify the original collision function:
+
+```C#
+void OnCollisionEnter2D(Collision2D collision)
+{
+    if (collision.gameObject.CompareTag("Player"))
+    {
+        GiveArmor();
+        Destroy(gameObject);
+    }
+}
+```
+
+Now the collision function is much easier to read it has less extra code and is more defined
+
+## Refactored Code
+
+Heres the script after refactoring:
+
+```C#
+using UnityEngine;
+
+public class ArmorPickup : MonoBehaviour
+{
+    PlayerStats playerStats;
+
+    public int addedArmor = 25;
+    public int maxArmor;
+    public int currentArmor;
+    public float armorDmgReduct;
+
+    void Start()
+    {
+        playerStats = FindObjectOfType<PlayerStats>();
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            GiveArmor();
+            Destroy(gameObject);
+        }
+    }
+
+    void GiveArmor()
+    {
+        if (currentArmor < maxArmor)
+        {
+            int newArmor = Mathf.Min(
+                currentArmor + addedArmor,
+                maxArmor
+            );
+
+            playerStats.SetArmor(newArmor);
+        }
+    }
+
+    void Update()
+    {
+        maxArmor = playerStats.GetMaxArmor();
+        currentArmor = playerStats.GetArmor();
+    }
+}
+```
+
+## Why This Is Better
+
+The biggest advantage is that the two functions now have separate responsibilities. `OnCollisionEnter2D()` handles detecting the player and destroying the pickup, while `GiveArmor()` handles calculating and updating the player's armor. This makes the code easier to read because I can understand what each function does just by looking at its name. It also makes future changes easier like if I wanted to change how armor is calculated or add different armor pickup amounts. I could modify `GiveArmor()` without changing how the collisions work and doing this made the code less cluttered.
+
+## Testing the Refactoring
+
+I tested these situations:
+
+| Current Armor | Max Armor | Armor Pickup | Expected Result |
+|---|---|---|---|
+| 25 | 100 | 25 | 50 |
+| 90 | 100 | 25 | 100 |
+| 100 | 100 | 25 | 100 |
+
+I would also test that the pickup is destroyed after the player collects it, even when their armor is already full.I would check that collisions with objects that aren't tagged as the player don't give armor or destroy the pickup. These tests make sure the refactored code matches the orginals functionallity.
+
+## Final Thoughts
+
+I originally wrote everything inside `OnCollisionEnter2D()` because it was easier to keep all the pickup logic in one place.Later on having too much logic inside one function can make it harder for me to modify the code. Using the method Extract Function to break the code into smaller sections that are easier to read and maintain without changing the way the armor pickup works. I think its a good example of how even a short function can improve from refactoring when it handles multiple tasks.
+
+## References
+
+- Martin Fowler, *Refactoring: Improving the Design of Existing Code*, 2nd Edition, Chapter 3: "Bad Smells in Code" — Long Function.
+- Martin Fowler, *Refactoring*, Chapter 6: "Extract Function."
+- [Refactoring.com — Extract Function](https://refactoring.com/catalog/extractFunction.html)
