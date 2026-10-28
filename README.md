@@ -1,6 +1,6 @@
 # Agenda:
 1. **Repeated Switches (Serena)**
-2. **Duplicated Code (Dylan)**
+2. **Insider Trading (Dylan)**
 3. **Insider Trading (Valerie)**
 
 # Code Smell #1: Repeated Switches
