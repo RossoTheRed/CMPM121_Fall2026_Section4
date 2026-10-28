@@ -1,7 +1,7 @@
 # Agenda:
 1. **Repeated Switches (Serena)**
 2. **Insider Trading (Dylan)**
-3. **Insider Trading (Valerie)**
+3. **Long Function (Valerie)**
 
 # Code Smell #1: Repeated Switches
 This smell permeates when there is a large chain of If/Else or Switch statements in a given block of code. It's bad for a couple of reasons: One, it's a pain to maintain as everytime you want to add some new variant, you have to find every instance of this giant conditional and add a new clause; This just adds to the seccond issue which is that it makes the code really hard to read because it clutters the function body with every possible variant and hides some of the more important parts of the function.
